@@ -33,30 +33,21 @@ use CrEOF\Geo\WKT\Exception\UnexpectedValueException;
  */
 class Parser
 {
-    /**
-     * @var string
-     */
-    private $type;
+    private ?string $type = null;
 
     /**
      * @var string
      */
     private $input;
 
-    /**
-     * @var int
-     */
-    private $srid;
+    private ?int $srid = null;
 
     /**
      * @var string
      */
     private $dimension;
 
-    /**
-     * @var Lexer
-     */
-    private $lexer;
+    private \CrEOF\Geo\WKT\Lexer $lexer;
 
     /**
      * @param string|null $input
@@ -138,7 +129,7 @@ class Parser
         $type       = $this->type();
         $this->type = $type;
 
-        if ($this->lexer->isNextTokenAny(array(Lexer::T_Z, Lexer::T_M, Lexer::T_ZM))) {
+        if ($this->lexer->isNextTokenAny([Lexer::T_Z, Lexer::T_M, Lexer::T_ZM])) {
             $this->match($this->lexer->lookahead['type']);
 
             $this->dimension = $this->lexer->value();
@@ -150,10 +141,7 @@ class Parser
 
         $this->match(Lexer::T_CLOSE_PARENTHESIS);
 
-        return array(
-            'type'  => $type,
-            'value' => $value
-        );
+        return ['type' => $type, 'value' => $value];
     }
 
     /**
@@ -169,7 +157,7 @@ class Parser
 
         $values = $this->coordinates(2);
 
-        for ($i = 3; $i <= 4 && $this->lexer->isNextTokenAny(array(Lexer::T_FLOAT, Lexer::T_INTEGER)); $i++) {
+        for ($i = 3; $i <= 4 && $this->lexer->isNextTokenAny([Lexer::T_FLOAT, Lexer::T_INTEGER]); $i++) {
             $values[] = $this->coordinate();
         }
 
@@ -195,7 +183,7 @@ class Parser
      */
     protected function coordinates($count)
     {
-        $values = array();
+        $values = [];
 
         for ($i = 1; $i <= $count; $i++) {
             $values[] = $this->coordinate();
@@ -206,10 +194,8 @@ class Parser
 
     /**
      * Match a number and optional exponent
-     *
-     * @return int|float
      */
-    protected function coordinate()
+    protected function coordinate(): int|float
     {
         $this->match(($this->lexer->isNextToken(Lexer::T_FLOAT) ? Lexer::T_FLOAT : Lexer::T_INTEGER));
 
@@ -243,7 +229,7 @@ class Parser
      */
     protected function pointList()
     {
-        $points = array($this->point());
+        $points = [$this->point()];
 
         while ($this->lexer->isNextToken(Lexer::T_COMMA)) {
             $this->match(Lexer::T_COMMA);
@@ -263,7 +249,7 @@ class Parser
     {
         $this->match(Lexer::T_OPEN_PARENTHESIS);
 
-        $pointLists = array($this->pointList());
+        $pointLists = [$this->pointList()];
 
         $this->match(Lexer::T_CLOSE_PARENTHESIS);
 
@@ -288,7 +274,7 @@ class Parser
     {
         $this->match(Lexer::T_OPEN_PARENTHESIS);
 
-        $polygons = array($this->polygon());
+        $polygons = [$this->polygon()];
 
         $this->match(Lexer::T_CLOSE_PARENTHESIS);
 
@@ -331,7 +317,7 @@ class Parser
      */
     protected function geometryCollection()
     {
-        $collection = array($this->geometry());
+        $collection = [$this->geometry()];
 
         while ($this->lexer->isNextToken(Lexer::T_COMMA)) {
             $this->match(Lexer::T_COMMA);
@@ -349,7 +335,7 @@ class Parser
      */
     protected function match($token)
     {
-        $lookaheadType = $this->lexer->lookahead['type'];
+        $lookaheadType = $this->lexer->lookahead['type'] ?? null;
 
         if ($lookaheadType !== $token && ($token !== Lexer::T_TYPE || $lookaheadType <= Lexer::T_TYPE)) {
             throw $this->syntaxError($this->lexer->getLiteral($token));
@@ -372,7 +358,7 @@ class Parser
         $found    = null === $this->lexer->lookahead ? 'end of string.' : sprintf('"%s"', $token['value']);
         $message  = sprintf(
             '[Syntax Error] line 0, col %d: Error: %s %s in value "%s"',
-            isset($token['position']) ? $token['position'] : '-1',
+            $token['position'] ?? '-1',
             $expected,
             $found,
             $this->input
